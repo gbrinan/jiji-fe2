@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ClipboardList, MessageCircle, HelpCircle, User } from "lucide-react";
+import { ClipboardList, MessageCircle, HelpCircle, User } from "lucide-react";
 
 const tabs = [
-  { href: "/home", label: "홈", icon: Home, match: "/home" },
   { href: "/survey/mrs", label: "진단", icon: ClipboardList, match: "/survey" },
   { href: "/chat", label: "채팅", icon: MessageCircle, match: "/chat" },
   { href: "/faq", label: "FAQ", icon: HelpCircle, match: "/faq" },

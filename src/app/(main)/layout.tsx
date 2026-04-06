@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
-import { AuthProvider } from "@/hooks/useAuth";
 import BottomNav from "@/components/layout/BottomNav";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -24,11 +23,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   if (!ready) return null;
 
   return (
-    <AuthProvider>
+    <>
       <div className="pb-16">
         {children}
       </div>
       <BottomNav />
-    </AuthProvider>
+    </>
   );
 }

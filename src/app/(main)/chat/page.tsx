@@ -2,71 +2,83 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { chatApi } from "@/lib/api";
 import type { ChatSessionResponse } from "@/lib/types";
 import Header from "@/components/layout/Header";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
+import { MessageCircle, Plus } from "lucide-react";
 
 const contextLabels: Record<string, string> = {
-  result: "결과 상담",
+  result: "검사 결과 상담",
   faq: "FAQ 상담",
   question: "질문 상담",
-  closing: "마무리",
+  closing: "마무리 상담",
 };
 
 export default function ChatListPage() {
   const router = useRouter();
   const [sessions, setSessions] = useState<ChatSessionResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    api.get<ChatSessionResponse[]>("/chats/sessions")
+    chatApi.getSessions()
       .then(setSessions)
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  async function createSession() {
-    setCreating(true);
+  const handleNewSession = async () => {
     try {
-      const session = await api.post<ChatSessionResponse>("/chats/sessions", { context: "question" });
+      const session = await chatApi.createSession({ context: "question" });
       router.push(`/chat/${session.id}`);
-    } catch {
-      alert("세션 생성에 실패했습니다.");
-    } finally {
-      setCreating(false);
-    }
-  }
+    } catch {}
+  };
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
 
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className="min-h-dvh bg-gradient-to-b from-blue-50 to-white">
       <Header title="채팅" />
-      <div className="px-5 pt-4 flex-1 flex flex-col gap-3">
-        <Button fullWidth loading={creating} onClick={createSession}>새 상담 시작하기</Button>
+
+      <div className="px-5 py-6 flex flex-col gap-3">
+        <Button variant="primary" fullWidth onClick={handleNewSession} leftIcon={<Plus className="w-5 h-5" />}>
+          새 상담 시작
+        </Button>
 
         {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} variant="card" className="h-20" />)
+          Array.from({ length: 4 }, (_, i) => <Skeleton key={i} variant="card" height="80px" />)
         ) : sessions.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">아직 상담 내역이 없습니다.</div>
+          <div className="text-center py-12">
+            <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">아직 상담 내역이 없습니다</p>
+          </div>
         ) : (
-          sessions.map((s) => (
+          sessions.map((session) => (
             <Card
-              key={s.id}
+              key={session.id}
               variant="outlined"
-              className="cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => router.push(`/chat/${session.id}`)}
+              className="cursor-pointer hover:border-primary-300 transition-colors"
             >
-              <button onClick={() => router.push(`/chat/${s.id}`)} className="w-full text-left">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-primary-500">{contextLabels[s.context] || s.context}</span>
-                  <span className="text-xs text-gray-400">
-                    {new Date(s.startedAt).toLocaleDateString("ko-KR")}
-                  </span>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+                  <MessageCircle className="w-5 h-5 text-primary-500" />
                 </div>
-                {s.endedAt && <p className="text-xs text-gray-400 mt-1">종료됨</p>}
-              </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-gray-900">
+                    {contextLabels[session.context] || session.context}
+                  </p>
+                  <p className="text-sm text-gray-500">{formatDate(session.startedAt)}</p>
+                </div>
+                {session.endedAt && (
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">완료</span>
+                )}
+              </div>
             </Card>
           ))
         )}

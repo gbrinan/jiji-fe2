@@ -1,6 +1,12 @@
 type BadgeVariant = "normal" | "mild" | "moderate" | "severe" | "somatic" | "psychological" | "urogenital";
 
-const styles: Record<BadgeVariant, string> = {
+interface BadgeProps {
+  variant: BadgeVariant;
+  label: string;
+  size?: "sm" | "md";
+}
+
+const variantStyles: Record<BadgeVariant, string> = {
   normal: "text-green-700 bg-green-50",
   mild: "text-yellow-800 bg-yellow-50",
   moderate: "text-orange-800 bg-orange-50",
@@ -10,14 +16,16 @@ const styles: Record<BadgeVariant, string> = {
   urogenital: "text-pink-700 bg-pink-50",
 };
 
-interface BadgeProps {
-  variant: BadgeVariant;
-  label: string;
-}
-
-export default function Badge({ variant, label }: BadgeProps) {
+export default function Badge({ variant, label, size = "md" }: BadgeProps) {
   return (
-    <span className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${styles[variant]}`}>
+    <span
+      className={`
+        inline-flex items-center rounded-full font-medium
+        ${variantStyles[variant]}
+        ${size === "sm" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm"}
+      `}
+      role="status"
+    >
       {label}
     </span>
   );

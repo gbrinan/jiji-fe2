@@ -2,34 +2,32 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { mrsApi } from "@/lib/api";
-import type { MrsQuestion, MrsAnswerItem, MrsResult } from "@/lib/types";
+import { hrtApi } from "@/lib/api";
+import type { HrtAbsoluteQuestion, HrtAnswerItem } from "@/lib/types";
 import Header from "@/components/layout/Header";
 import ProgressBar from "@/components/ui/ProgressBar";
 import Button from "@/components/ui/Button";
 import SurveyQuestionCard from "@/components/features/SurveyQuestionCard";
-import { LikertRadioGroup } from "@/components/ui/RadioGroup";
+import { HrtRadioGroup } from "@/components/ui/RadioGroup";
 import Skeleton from "@/components/ui/Skeleton";
 
-const LIKERT_OPTIONS = [
-  { value: 0, label: "없음" },
-  { value: 1, label: "경미" },
-  { value: 2, label: "중등" },
-  { value: 3, label: "심함" },
-  { value: 4, label: "매우 심함" },
+const HRT_OPTIONS = [
+  { value: "YES", label: "예" },
+  { value: "NO", label: "아니오" },
+  { value: "DONT_KNOW", label: "모르겠음" },
 ];
 
-export default function MrsSurveyPage() {
+export default function HrtAbsolutePage() {
   const router = useRouter();
-  const [questions, setQuestions] = useState<MrsQuestion[]>([]);
+  const [questions, setQuestions] = useState<HrtAbsoluteQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [answers, setAnswers] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    mrsApi.getQuestionnaire()
+    hrtApi.getAbsoluteQuestionnaire()
       .then((data) => {
         setQuestions(data.questions);
         setLoading(false);
@@ -45,34 +43,35 @@ export default function MrsSurveyPage() {
   const isLastQuestion = currentIndex === totalQuestions - 1;
   const hasAnswer = currentQuestion ? answers[currentQuestion.id] !== undefined : false;
 
-  const handleAnswer = (value: number) => {
+  const handleAnswer = (value: string) => {
     if (!currentQuestion) return;
     setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }));
   };
 
   const handleNext = () => {
-    if (!isLastQuestion) {
-      setCurrentIndex((prev) => prev + 1);
-    }
+    if (!isLastQuestion) setCurrentIndex((prev) => prev + 1);
   };
 
   const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-    }
+    if (currentIndex > 0) setCurrentIndex((prev) => prev - 1);
   };
 
   const handleSubmit = async () => {
     setSubmitting(true);
     setError("");
     try {
-      const answerItems: MrsAnswerItem[] = questions.map((q) => ({
+      const answerItems: HrtAnswerItem[] = questions.map((q) => ({
         questionId: q.id,
-        answer: answers[q.id] ?? 0,
+        answer: answers[q.id] ?? "NO",
       }));
-      const result: MrsResult = await mrsApi.submit({ answers: answerItems });
-      sessionStorage.setItem("mrsResult", JSON.stringify(result));
-      router.push("/survey/result");
+      const result = await hrtApi.submitAbsolute({ answers: answerItems });
+
+      if (result.diagnosis.nextAction === "START_HRT_RELATIVE") {
+        router.push("/survey/hrt/relative");
+      } else {
+        // EXPERT_CONSULTATION - redirect to chat or info page
+        router.push("/chat");
+      }
     } catch {
       setError("제출에 실패했습니다. 다시 시도해 주세요.");
       setSubmitting(false);
@@ -82,10 +81,10 @@ export default function MrsSurveyPage() {
   if (loading) {
     return (
       <div className="min-h-dvh bg-gradient-to-b from-blue-50 to-white">
-        <Header title="갱년기 증상 평가" showBackButton />
+        <Header title="호르몬 치료 금기사항 확인" showBackButton />
         <div className="px-5 py-6 flex flex-col gap-4">
           <Skeleton variant="bar" />
-          <Skeleton variant="card" height="300px" />
+          <Skeleton variant="card" height="250px" />
         </div>
       </div>
     );
@@ -94,12 +93,10 @@ export default function MrsSurveyPage() {
   if (error && questions.length === 0) {
     return (
       <div className="min-h-dvh bg-gradient-to-b from-blue-50 to-white">
-        <Header title="갱년기 증상 평가" showBackButton />
+        <Header title="호르몬 치료 금기사항 확인" showBackButton />
         <div className="px-5 py-12 text-center">
           <p className="text-red-500 mb-4">{error}</p>
-          <Button variant="secondary" onClick={() => window.location.reload()}>
-            다시 시도
-          </Button>
+          <Button variant="secondary" onClick={() => window.location.reload()}>다시 시도</Button>
         </div>
       </div>
     );
@@ -107,8 +104,7 @@ export default function MrsSurveyPage() {
 
   return (
     <div className="min-h-dvh bg-gradient-to-b from-blue-50 to-white">
-      <Header title="갱년기 증상 평가" showBackButton />
-
+      <Header title="호르몬 치료 금기사항 확인" showBackButton />
       <div className="px-5 py-6 flex flex-col gap-6">
         <ProgressBar current={currentIndex + 1} total={totalQuestions} />
 
@@ -116,12 +112,11 @@ export default function MrsSurveyPage() {
           <SurveyQuestionCard
             questionNumber={currentIndex + 1}
             totalQuestions={totalQuestions}
-            domain={currentQuestion.domain}
             prompt={currentQuestion.prompt}
           >
-            <LikertRadioGroup
+            <HrtRadioGroup
               questionId={currentQuestion.id}
-              options={LIKERT_OPTIONS}
+              options={HRT_OPTIONS}
               selectedValue={answers[currentQuestion.id] ?? null}
               onChange={handleAnswer}
               disabled={submitting}
@@ -133,29 +128,12 @@ export default function MrsSurveyPage() {
 
         <div className="flex gap-3">
           {currentIndex > 0 && (
-            <Button variant="secondary" onClick={handlePrev} disabled={submitting} className="flex-1">
-              이전
-            </Button>
+            <Button variant="secondary" onClick={handlePrev} disabled={submitting} className="flex-1">이전</Button>
           )}
           {isLastQuestion ? (
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              loading={submitting}
-              disabled={!hasAnswer}
-              className="flex-1"
-            >
-              제출
-            </Button>
+            <Button variant="primary" onClick={handleSubmit} loading={submitting} disabled={!hasAnswer} className="flex-1">제출</Button>
           ) : (
-            <Button
-              variant="primary"
-              onClick={handleNext}
-              disabled={!hasAnswer}
-              fullWidth={currentIndex === 0}
-            >
-              다음
-            </Button>
+            <Button variant="primary" onClick={handleNext} disabled={!hasAnswer} fullWidth={currentIndex === 0}>다음</Button>
           )}
         </div>
       </div>

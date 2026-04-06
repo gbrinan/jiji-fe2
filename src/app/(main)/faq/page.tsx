@@ -1,67 +1,76 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api } from "@/lib/api";
+import { faqApi } from "@/lib/api";
 import type { FaqResponse } from "@/lib/types";
 import Header from "@/components/layout/Header";
+import Accordion from "@/components/ui/Accordion";
 import Skeleton from "@/components/ui/Skeleton";
-import { ChevronDown } from "lucide-react";
-
-function FaqItem({ faq }: { faq: FaqResponse }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex justify-between items-center w-full px-4 py-4 min-h-[56px] text-left"
-        aria-expanded={open}
-      >
-        <span className="text-base font-medium text-gray-900 flex-1 pr-2">{faq.question}</span>
-        <ChevronDown className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="px-4 pb-4">
-          <p className="text-base text-gray-600">{faq.answer}</p>
-          {faq.dataBox && (
-            <div className="mt-3 bg-blue-50 rounded-lg p-4">
-              <p className="text-sm font-semibold text-primary-600 mb-2">{faq.dataBox.title}</p>
-              <ul className="list-disc pl-4 text-sm text-gray-700 space-y-1">
-                {faq.dataBox.items.map((item, i) => <li key={i}>{item}</li>)}
-              </ul>
-            </div>
-          )}
-          {faq.footerMessage && (
-            <p className="mt-3 text-sm text-gray-500 italic">{faq.footerMessage}</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function FaqPage() {
   const [faqs, setFaqs] = useState<FaqResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<FaqResponse[]>("/api/v1/chats/faq")
+    faqApi.getAll(selectedCategory ?? undefined)
       .then(setFaqs)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedCategory]);
+
+  // Extract unique categories
+  const categories = Array.from(new Set(faqs.map((f) => f.category).filter(Boolean))) as string[];
 
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className="min-h-dvh bg-gradient-to-b from-blue-50 to-white">
       <Header title="자주 묻는 질문" />
-      <div className="px-5 pt-4 flex-1 flex flex-col gap-3">
-        {loading ? (
-          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} variant="card" className="h-14" />)
-        ) : faqs.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">등록된 FAQ가 없습니다.</div>
-        ) : (
-          faqs.map((faq) => <FaqItem key={faq.id} faq={faq} />)
+
+      <div className="px-5 py-6">
+        {/* Category filter */}
+        {categories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-4 -mx-5 px-5 scrollbar-hide">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex-shrink-0 transition-colors
+                ${!selectedCategory ? "bg-primary-500 text-white" : "bg-white text-gray-600 border border-gray-200"}`}
+            >
+              전체
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex-shrink-0 transition-colors
+                  ${selectedCategory === cat ? "bg-primary-500 text-white" : "bg-white text-gray-600 border border-gray-200"}`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         )}
+
+        {/* FAQ list */}
+        <div className="flex flex-col gap-3">
+          {loading ? (
+            Array.from({ length: 5 }, (_, i) => <Skeleton key={i} variant="card" height="56px" />)
+          ) : faqs.length === 0 ? (
+            <p className="text-center text-gray-500 py-12">등록된 FAQ가 없습니다</p>
+          ) : (
+            faqs.map((faq) => (
+              <Accordion
+                key={faq.id}
+                question={faq.question}
+                answer={faq.answer}
+                dataBox={faq.dataBox}
+                footerMessage={faq.footerMessage}
+                isOpen={openId === faq.id}
+                onToggle={() => setOpenId(openId === faq.id ? null : faq.id)}
+              />
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

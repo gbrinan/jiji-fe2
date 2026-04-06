@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_KR } from "next/font/google";
+import { AuthProvider } from "@/hooks/useAuth";
 import "./globals.css";
 
-const notoSansKr = Noto_Sans_KR({
+const pretendard = Noto_Sans_KR({
   subsets: ["latin"],
-  variable: "--font-noto-sans-kr",
+  variable: "--font-pretendard",
   display: "swap",
 });
 
@@ -26,10 +27,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={notoSansKr.className}>
-      <body className="min-h-dvh bg-gray-50">
+    <html lang="ko" className={pretendard.variable}>
+      <body className="min-h-dvh bg-gray-50 font-sans">
         <div className="mx-auto max-w-md min-h-dvh bg-white relative">
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </div>
       </body>
     </html>

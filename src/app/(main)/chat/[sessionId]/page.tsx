@@ -1,93 +1,85 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { api } from "@/lib/api";
-import type { MessageResponse, CreateMessageRequest } from "@/lib/types";
-import Header from "@/components/layout/Header";
-import { Send } from "lucide-react";
-
-function ChatBubble({ msg }: { msg: MessageResponse }) {
-  const isUser = msg.senderType === "user";
-  return (
-    <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
-      <div
-        className={`
-          max-w-[80%] px-4 py-3 text-base whitespace-pre-wrap
-          ${isUser
-            ? "bg-primary-500 text-white rounded-2xl rounded-br-md"
-            : "bg-gray-100 text-gray-900 rounded-2xl rounded-bl-md"
-          }
-        `}
-      >
-        {msg.content}
-      </div>
-      <span className="text-xs text-gray-400 mt-1">
-        {new Date(msg.createdAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
-      </span>
-    </div>
-  );
-}
+import { chatApi } from "@/lib/api";
+import type { MessageResponse } from "@/lib/types";
+import ChatLayout from "@/components/layout/ChatLayout";
+import Skeleton from "@/components/ui/Skeleton";
 
 export default function ChatConversationPage() {
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const params = useParams();
+  const sessionId = params.sessionId as string;
   const [messages, setMessages] = useState<MessageResponse[]>([]);
-  const [input, setInput] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    api.get<MessageResponse[]>(`/chats/sessions/${sessionId}/messages`)
-      .then(setMessages)
-      .catch(() => {});
+  const fetchMessages = useCallback(async () => {
+    try {
+      const msgs = await chatApi.getMessages(sessionId);
+      setMessages(msgs);
+    } catch {}
   }, [sessionId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    fetchMessages().finally(() => setLoading(false));
+  }, [fetchMessages]);
 
-  async function handleSend() {
-    if (!input.trim() || sending) return;
+  const handleSend = async () => {
+    if (!inputValue.trim() || sending) return;
+    const content = inputValue.trim();
+    setInputValue("");
     setSending(true);
+
     try {
-      const body: CreateMessageRequest = { senderType: "user", content: input.trim() };
-      const msg = await api.post<MessageResponse>(`/chats/sessions/${sessionId}/messages`, body);
-      setMessages((prev) => [...prev, msg]);
-      setInput("");
+      // Send user message
+      const userMsg = await chatApi.sendMessage(sessionId, {
+        senderType: "user",
+        content,
+      });
+      setMessages((prev) => [...prev, userMsg]);
+
+      // In a real app, the assistant response would come from a different mechanism
+      // For now, we just refetch messages after a short delay
+      setTimeout(async () => {
+        await fetchMessages();
+        setSending(false);
+      }, 1000);
     } catch {
-      alert("메시지 전송에 실패했습니다.");
-    } finally {
       setSending(false);
     }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-dvh">
+        <div className="bg-gradient-to-br from-primary-500 to-primary-600 h-14 rounded-b-3xl" />
+        <div className="px-5 py-6 flex flex-col gap-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
+              <Skeleton variant="card" width={i % 2 === 0 ? "70%" : "60%"} height="60px" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-dvh flex flex-col">
-      <Header title="상담" showBackButton />
-      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-20 flex flex-col gap-4" role="log">
-        {messages.map((msg) => (
-          <ChatBubble key={msg.id} msg={msg} />
-        ))}
-        <div ref={bottomRef} />
-      </div>
-
-      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 px-4 py-3 flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-          placeholder="메시지를 입력하세요"
-          className="flex-1 bg-gray-100 rounded-full px-4 py-3 text-base outline-none"
-          disabled={sending}
-        />
-        <button
-          onClick={handleSend}
-          disabled={!input.trim() || sending}
-          className={`w-10 h-10 rounded-full flex items-center justify-center ${input.trim() ? "bg-primary-500 text-white" : "bg-gray-200 text-gray-400"}`}
-        >
-          <Send className="w-5 h-5" />
-        </button>
-      </div>
-    </div>
+    <ChatLayout
+      title="상담"
+      messages={messages.map((m) => ({
+        id: m.id,
+        senderType: m.senderType as "user" | "assistant",
+        content: m.content,
+        createdAt: m.createdAt,
+      }))}
+      inputValue={inputValue}
+      onInputChange={setInputValue}
+      onSend={handleSend}
+      inputDisabled={sending}
+      showBackButton
+    />
   );
 }

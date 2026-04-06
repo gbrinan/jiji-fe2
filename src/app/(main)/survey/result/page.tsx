@@ -1,122 +1,167 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { MrsResult, MrsNextAction } from "@/lib/types";
-import ChatLayout from "@/components/layout/ChatLayout";
-import AiBubble from "@/components/features/AiBubble";
+import { chatApi } from "@/lib/api";
+import Header from "@/components/layout/Header";
+import Card from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import ResultDomainBar from "@/components/ui/ResultDomainBar";
+import Skeleton from "@/components/ui/Skeleton";
 
-const severityColor: Record<string, string> = {
-  정상: "text-green-600",
-  경도: "text-yellow-600",
-  중등도: "text-orange-600",
-  중증: "text-red-600",
+const ACTION_CONFIG: Record<MrsNextAction, { title: string; description: string; buttonLabel: string }> = {
+  EXPERT_CONSULTATION: {
+    title: "전문의 상담 필요",
+    description: "증상의 정도가 높아 전문의 상담을 권장합니다.",
+    buttonLabel: "전문의 상담 안내",
+  },
+  CBT_GUIDANCE: {
+    title: "인지행동치료 안내",
+    description: "인지행동치료를 통해 증상을 개선할 수 있습니다.",
+    buttonLabel: "인지행동치료 시작",
+  },
+  START_HRT_ABSOLUTE: {
+    title: "호르몬 치료 적합성 검사",
+    description: "호르몬 치료가 적합한지 추가 검사를 진행합니다.",
+    buttonLabel: "적합성 검사 시작",
+  },
+  NON_HORMONAL_QA: {
+    title: "비호르몬 치료 안내",
+    description: "호르몬 외 다른 치료 방법을 안내해 드립니다.",
+    buttonLabel: "비호르몬 치료 알아보기",
+  },
+  LIFESTYLE_GUIDANCE: {
+    title: "생활습관 개선 안내",
+    description: "생활습관 개선으로 증상을 완화할 수 있습니다.",
+    buttonLabel: "생활습관 안내 시작",
+  },
 };
 
-const nextActionLabels: Record<MrsNextAction, string> = {
-  EXPERT_CONSULTATION: "전문의 상담 필요",
-  CBT_GUIDANCE: "인지행동치료 안내",
-  START_HRT_ABSOLUTE: "내게 맞는 치료법 확인하기",
-  NON_HORMONAL_QA: "비호르몬성 치료 안내",
-  LIFESTYLE_GUIDANCE: "생활습관 개선 안내",
+const severityVariant = (label: string) => {
+  if (label.includes("정상")) return "normal" as const;
+  if (label.includes("경도")) return "mild" as const;
+  if (label.includes("중등")) return "moderate" as const;
+  return "severe" as const;
 };
-
-function DomainRow({ icon, label, score, total }: { icon: string; label: string; score: number; total: number }) {
-  return (
-    <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-      <div className="flex items-center gap-2 text-sm text-gray-700">
-        <span>{icon}</span> {label}
-      </div>
-      <span className="text-sm font-semibold text-gray-900">{score} <span className="text-gray-400 font-normal">/{total}</span></span>
-    </div>
-  );
-}
 
 export default function ResultPage() {
   const router = useRouter();
   const [result, setResult] = useState<MrsResult | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("mrs_result");
-    if (stored) setResult(JSON.parse(stored));
-  }, []);
+    const stored = sessionStorage.getItem("mrsResult");
+    if (stored) {
+      try {
+        setResult(JSON.parse(stored));
+      } catch {
+        router.replace("/survey/mrs");
+      }
+    } else {
+      router.replace("/survey/mrs");
+    }
+  }, [router]);
+
+  const handleAction = async () => {
+    if (!result) return;
+    const { nextAction } = result.diagnosis;
+
+    if (nextAction === "START_HRT_ABSOLUTE") {
+      router.push("/survey/hrt/absolute");
+      return;
+    }
+
+    // For chat-based actions, create a session and navigate
+    if (nextAction === "EXPERT_CONSULTATION") {
+      // Show info - could also create a chat session
+      router.push("/chat");
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const session = await chatApi.createSession({
+        context: "result",
+        surveyResultId: String(result.id),
+      });
+      router.push(`/chat/${session.id}`);
+    } catch {
+      setActionLoading(false);
+    }
+  };
 
   if (!result) {
     return (
-      <ChatLayout showTimestamp subtitle="분석이 완료되었습니다.">
-        <div className="text-center py-12 text-gray-400">결과 데이터가 없습니다.</div>
-      </ChatLayout>
+      <div>
+        <Header title="검사 결과" showBackButton />
+        <div className="px-5 py-6 flex flex-col gap-4">
+          <Skeleton variant="card" height="200px" />
+          <Skeleton variant="card" height="150px" />
+        </div>
+      </div>
     );
   }
 
   const { diagnosis, symptoms } = result;
-  const sevClass = Object.entries(severityColor).find(([k]) => diagnosis.severityLabel.includes(k))?.[1] || "text-gray-900";
-
-  function handleAction() {
-    if (diagnosis.nextAction === "START_HRT_ABSOLUTE") {
-      router.push("/survey/hrt-absolute");
-    } else {
-      router.push("/chat");
-    }
-  }
+  const action = ACTION_CONFIG[diagnosis.nextAction];
 
   return (
-    <ChatLayout showTimestamp subtitle="분석이 완료되었습니다.">
-      {/* AI Intro */}
-      <div className="mb-4">
-        <AiBubble>
-          답변하시느라 고생 많으셨어요. 작성해주신 내용을 바탕으로 분석한 결과를 정리해보았습니다.
-        </AiBubble>
-      </div>
+    <div className="min-h-dvh bg-gradient-to-b from-blue-50 to-white">
+      <Header title="검사 결과" showBackButton />
 
-      {/* Score Card */}
-      <div className="bg-white/90 backdrop-blur rounded-2xl p-5 shadow-sm mb-4 ml-10">
-        <div className="flex items-center gap-2 mb-3">
-          <span>📊</span>
-          <span className="text-sm font-medium text-gray-600">진단 종합 점수</span>
-          <span className="ml-auto text-xs text-primary-500 font-medium">상위 {diagnosis.topPercentileLabel}</span>
-        </div>
-        <div className="flex items-baseline gap-1 mb-4">
-          <span className="text-4xl font-bold text-gray-900">{diagnosis.summaryScore}</span>
-          <span className={`text-lg font-semibold ${sevClass}`}>점</span>
-          <span className={`text-base font-semibold ${sevClass} ml-1`}>{diagnosis.severityLabel}</span>
-          <span className="text-sm text-gray-400 ml-1">/총 {diagnosis.totalPossibleScore}점 만점</span>
-        </div>
+      <div className="px-5 py-6 flex flex-col gap-4">
+        {/* Score Summary Card */}
+        <Card variant="elevated" padding="lg">
+          <div className="text-center">
+            <p className="text-[28px] font-bold text-gray-900">
+              {diagnosis.summaryScore}
+              <span className="text-lg font-normal text-gray-500">/{diagnosis.totalPossibleScore}</span>
+            </p>
+            <div className="flex justify-center gap-2 mt-3">
+              <Badge variant={severityVariant(diagnosis.severityLabel)} label={diagnosis.severityLabel} />
+            </div>
+            {diagnosis.topPercentileLabel && (
+              <p className="text-sm text-gray-500 mt-2">{diagnosis.topPercentileLabel}</p>
+            )}
+          </div>
+        </Card>
 
-        <div className="bg-gray-50 rounded-xl p-3">
-          <DomainRow icon="💪" label="신체 증상" score={symptoms.physical.score} total={symptoms.physical.total} />
-          <DomainRow icon="🧠" label="심리 증상" score={symptoms.psychological.score} total={symptoms.psychological.total} />
-          <DomainRow icon="🩺" label="비뇨생식기" score={symptoms.urinary.score} total={symptoms.urinary.total} />
-        </div>
-      </div>
+        {/* Domain Breakdown Card */}
+        <Card variant="default" padding="lg">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">영역별 점수</h3>
+          <div className="flex flex-col gap-4">
+            <ResultDomainBar
+              label="신체 증상"
+              score={symptoms.physical.score}
+              total={symptoms.physical.total}
+              color="bg-domain-physical"
+            />
+            <ResultDomainBar
+              label="심리 증상"
+              score={symptoms.psychological.score}
+              total={symptoms.psychological.total}
+              color="bg-domain-psychological"
+            />
+            <ResultDomainBar
+              label="비뇨기 증상"
+              score={symptoms.urinary.score}
+              total={symptoms.urinary.total}
+              color="bg-domain-urogenital"
+            />
+          </div>
+        </Card>
 
-      {/* AI Comment */}
-      <div className="mb-4">
-        <AiBubble showAvatar={false}>
-          특히 심리적인 부분에서 어려움이 크셨군요. 최근 느끼시는 우울감이나 불안은 호르몬 변화로 인한 자연스러운 현상이에요.
-        </AiBubble>
+        {/* Next Action Card */}
+        <Card variant="default" padding="lg">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">{action.title}</h3>
+          <p className="text-base text-gray-600 mb-4">{action.description}</p>
+          <Button variant="primary" fullWidth onClick={handleAction} loading={actionLoading}>
+            {action.buttonLabel}
+          </Button>
+        </Card>
       </div>
-      <div className="mb-4">
-        <AiBubble showAvatar={false}>
-          지금 상태는 조금 더 체계적인 관리가 필요한 단계에요. 치료 방향을 찾기 위해 30초 정도면 끝나는 간단한 체크를 먼저 해볼까요?
-        </AiBubble>
-      </div>
-
-      {/* CTA Buttons */}
-      <div className="flex flex-col gap-3 ml-10 mb-6">
-        <button
-          onClick={handleAction}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold text-sm"
-        >
-          {nextActionLabels[diagnosis.nextAction]}
-        </button>
-        <button
-          onClick={() => router.push("/home")}
-          className="w-full py-3 rounded-2xl border border-primary-400 text-primary-500 font-semibold text-sm bg-white/60"
-        >
-          괜찮아요
-        </button>
-      </div>
-    </ChatLayout>
+    </div>
   );
 }
