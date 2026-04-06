@@ -1,19 +1,27 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { hasToken } from "@/lib/api";
+import { createClient } from "@/lib/supabase";
 import { AuthProvider } from "@/hooks/useAuth";
 import BottomNav from "@/components/layout/BottomNav";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!hasToken()) {
-      router.replace("/login");
-    }
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace("/login");
+      } else {
+        setReady(true);
+      }
+    });
   }, [router]);
+
+  if (!ready) return null;
 
   return (
     <AuthProvider>

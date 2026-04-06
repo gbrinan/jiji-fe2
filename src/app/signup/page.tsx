@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, setToken } from "@/lib/api";
-import type { AuthResponse, SignUpRequest } from "@/lib/types";
+import { createClient } from "@/lib/supabase";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
@@ -17,7 +16,7 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (password !== confirm) {
       setError("비밀번호가 일치하지 않습니다.");
@@ -26,13 +25,13 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await api.post<AuthResponse>("/api/v1/auth/signup", {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signUp({
         email,
         password,
-        name,
-      } satisfies SignUpRequest);
-      setToken(res.accessToken);
-      localStorage.setItem("jiji_user", JSON.stringify(res.user));
+        options: { data: { name } },
+      });
+      if (error) throw error;
       router.replace("/onboarding");
     } catch {
       setError("회원가입에 실패했습니다. 다시 시도해주세요.");

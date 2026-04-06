@@ -2,14 +2,16 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { hasToken } from "@/lib/api";
+import { createClient } from "@/lib/supabase";
 
 export default function SplashPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace(hasToken() ? "/survey/mrs" : "/login");
+    const timer = setTimeout(async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      router.replace(session ? "/survey/mrs" : "/login");
     }, 1500);
     return () => clearTimeout(timer);
   }, [router]);

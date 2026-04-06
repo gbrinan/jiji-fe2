@@ -2,59 +2,58 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
-import type { AuthUser } from "@/lib/types";
-import { hasToken, clearToken } from "@/lib/api";
+import type { User, Session } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase";
 
 interface AuthContextType {
-  user: AuthUser | null;
+  user: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  setUser: (user: AuthUser | null) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  session: null,
   isAuthenticated: false,
   isLoading: true,
-  setUser: () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const supabase = createClient();
 
   useEffect(() => {
-    const stored = localStorage.getItem("jiji_user");
-    if (stored && hasToken()) {
-      setUser(JSON.parse(stored));
-    }
-    setIsLoading(false);
-  }, []);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
 
-  const handleSetUser = useCallback((u: AuthUser | null) => {
-    setUser(u);
-    if (u) {
-      localStorage.setItem("jiji_user", JSON.stringify(u));
-    } else {
-      localStorage.removeItem("jiji_user");
-    }
-  }, []);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
 
-  const logout = useCallback(() => {
-    clearToken();
-    handleSetUser(null);
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     window.location.href = "/login";
-  }, [handleSetUser]);
+  }, [supabase.auth]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        session,
+        isAuthenticated: !!session,
         isLoading,
-        setUser: handleSetUser,
         logout,
       }}
     >

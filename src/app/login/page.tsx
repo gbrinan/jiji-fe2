@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, setToken } from "@/lib/api";
-import type { AuthResponse, SignInRequest } from "@/lib/types";
+import { createClient } from "@/lib/supabase";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
@@ -15,17 +14,14 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const res = await api.post<AuthResponse>("/api/v1/auth/signin", {
-        email,
-        password,
-      } satisfies SignInRequest);
-      setToken(res.accessToken);
-      localStorage.setItem("jiji_user", JSON.stringify(res.user));
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       router.replace("/survey/mrs");
     } catch {
       setError("이메일 또는 비밀번호가 올바르지 않습니다.");
