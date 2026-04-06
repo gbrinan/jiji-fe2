@@ -3,65 +3,43 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import type { MrsQuestionnaire, MrsResult, MrsAnswerItem, MrsDomain } from "@/lib/types";
-import Header from "@/components/layout/Header";
+import type { MrsQuestionnaire, MrsResult, MrsAnswerItem } from "@/lib/types";
+import ChatLayout from "@/components/layout/ChatLayout";
+import AiBubble from "@/components/features/AiBubble";
 import Button from "@/components/ui/Button";
-import ProgressBar from "@/components/ui/ProgressBar";
-import Badge from "@/components/ui/Badge";
-import Card from "@/components/ui/Card";
 import Skeleton from "@/components/ui/Skeleton";
 
-const domainLabels: Record<MrsDomain, { label: string; variant: "somatic" | "psychological" | "urogenital" }> = {
-  SOMATIC: { label: "신체", variant: "somatic" },
-  PSYCHOLOGICAL: { label: "심리", variant: "psychological" },
-  UROGENITAL: { label: "비뇨기", variant: "urogenital" },
-};
-
-const likertLabels = ["없음", "경미", "중등", "심함", "매우 심함"];
+const emojis = ["😊", "🙂", "😐", "😟", "😫"];
+const labels = ["없음", "약간", "보통", "심함", "매우 심함"];
 
 export default function MrsSurveyPage() {
   const router = useRouter();
   const [questionnaire, setQuestionnaire] = useState<MrsQuestionnaire | null>(null);
-  const [currentIdx, setCurrentIdx] = useState(0);
+  const [page, setPage] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     api.get<MrsQuestionnaire>("/api/v1/survey/mrs")
       .then(setQuestionnaire)
-      .catch(() => setError("설문을 불러올 수 없습니다."))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
+  if (loading || !questionnaire) {
     return (
-      <div>
-        <Header title="갱년기 증상 평가" showBackButton />
-        <div className="px-5 pt-4 flex flex-col gap-4">
-          <Skeleton variant="bar" />
-          <Skeleton variant="card" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !questionnaire) {
-    return (
-      <div>
-        <Header title="갱년기 증상 평가" showBackButton />
-        <div className="px-5 pt-8 text-center">
-          <p className="text-red-500 mb-4">{error || "오류가 발생했습니다."}</p>
-          <Button variant="secondary" onClick={() => window.location.reload()}>다시 시도</Button>
-        </div>
-      </div>
+      <ChatLayout showTimestamp hideInput>
+        <AiBubble><Skeleton variant="text" /><Skeleton variant="text" className="w-2/3" /></AiBubble>
+      </ChatLayout>
     );
   }
 
   const questions = questionnaire.questions;
-  const q = questions[currentIdx];
-  const isLast = currentIdx === questions.length - 1;
+  const pageSize = 5;
+  const totalPages = Math.ceil(questions.length / pageSize);
+  const pageQuestions = questions.slice(page * pageSize, (page + 1) * pageSize);
+  const isLastPage = page === totalPages - 1;
+  const allPageAnswered = pageQuestions.every((q) => answers[q.id] !== undefined);
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -74,66 +52,89 @@ export default function MrsSurveyPage() {
       sessionStorage.setItem("mrs_result", JSON.stringify(result));
       router.push("/survey/result");
     } catch {
-      setError("제출에 실패했습니다.");
+      alert("제출에 실패했습니다.");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="min-h-dvh flex flex-col">
-      <Header title="갱년기 증상 평가" showBackButton />
-      <div className="px-5 pt-4 flex-1 flex flex-col">
-        <ProgressBar current={currentIdx + 1} total={questions.length} />
-
-        <Card variant="elevated" padding="lg" className="mt-4 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm text-gray-400">{currentIdx + 1}번</span>
-            <Badge variant={domainLabels[q.domain].variant} label={domainLabels[q.domain].label} />
-          </div>
-          <p className="text-lg font-medium text-gray-900 mb-6">{q.prompt}</p>
-
-          <div className="flex flex-col gap-3" role="radiogroup">
-            {q.answer.options.map((val) => {
-              const selected = answers[q.id] === val;
-              return (
-                <button
-                  key={val}
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => setAnswers({ ...answers, [q.id]: val })}
-                  className={`
-                    flex items-center gap-3 min-h-[48px] px-4 py-3 rounded-xl border text-left transition-all
-                    ${selected ? "border-primary-500 bg-blue-50" : "border-gray-200 bg-white"}
-                  `}
-                >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selected ? "border-primary-500" : "border-gray-300"}`}>
-                    {selected && <div className="w-2.5 h-2.5 rounded-full bg-primary-500" />}
-                  </div>
-                  <span className="text-base text-gray-900">
-                    {val} - {likertLabels[val]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </Card>
-
-        <div className="flex gap-3 py-4">
-          {currentIdx > 0 && (
-            <Button variant="secondary" onClick={() => setCurrentIdx(currentIdx - 1)}>이전</Button>
-          )}
-          {isLast ? (
-            <Button fullWidth loading={submitting} onClick={handleSubmit} disabled={answers[q.id] === undefined}>
-              제출
-            </Button>
-          ) : (
-            <Button fullWidth onClick={() => setCurrentIdx(currentIdx + 1)} disabled={answers[q.id] === undefined}>
-              다음
-            </Button>
-          )}
-        </div>
+    <ChatLayout showTimestamp hideInput>
+      {/* AI Intro */}
+      <div className="mb-6">
+        <AiBubble>
+          지금부터 몇 가지 간단한 질문을 드릴게요.
+          모든 답변은 안전하게 보호되며, 의료 상담 이외의 목적으로는 활용되지 않습니다.
+        </AiBubble>
       </div>
-    </div>
+
+      {/* Questions */}
+      <div className="bg-white/80 backdrop-blur rounded-3xl p-5 shadow-sm flex flex-col gap-6">
+        {pageQuestions.map((q, idx) => {
+          const globalIdx = page * pageSize + idx;
+          return (
+            <div key={q.id}>
+              <p className="text-xs text-primary-500 font-semibold mb-1">{String(globalIdx + 1).padStart(2, "0")}</p>
+              <p className="text-base font-semibold text-gray-900 mb-1">{q.prompt}</p>
+              <div className="flex justify-between mt-3">
+                {q.answer.options.map((val) => {
+                  const selected = answers[q.id] === val;
+                  return (
+                    <button
+                      key={val}
+                      onClick={() => setAnswers({ ...answers, [q.id]: val })}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <span
+                        className={`text-2xl transition-all ${selected ? "scale-125" : "grayscale opacity-60"}`}
+                      >
+                        {emojis[val]}
+                      </span>
+                      <span
+                        className={`text-[10px] ${selected ? "text-primary-600 font-semibold" : "text-gray-400"}`}
+                      >
+                        {labels[val]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex gap-3 mt-6 pb-4">
+        {page > 0 && (
+          <button
+            onClick={() => setPage(page - 1)}
+            className="flex-none px-6 py-3.5 rounded-2xl border border-gray-300 bg-white text-gray-700 font-semibold text-sm"
+          >
+            이전
+          </button>
+        )}
+        {isLastPage ? (
+          <Button fullWidth loading={submitting} onClick={handleSubmit} disabled={!allPageAnswered}>
+            제출
+          </Button>
+        ) : (
+          <button
+            onClick={() => setPage(page + 1)}
+            disabled={!allPageAnswered}
+            className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold text-sm disabled:opacity-40"
+          >
+            다음
+          </button>
+        )}
+      </div>
+
+      {/* Page Dots */}
+      <div className="flex justify-center gap-2 pb-4">
+        {Array.from({ length: totalPages }).map((_, i) => (
+          <div key={i} className={`h-2 rounded-full transition-all ${i === page ? "w-8 bg-gray-800" : "w-2 bg-gray-300"}`} />
+        ))}
+      </div>
+    </ChatLayout>
   );
 }

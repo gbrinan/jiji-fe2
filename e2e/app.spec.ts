@@ -38,6 +38,12 @@ test.describe("JIJI App E2E Tests", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
+  test("비인증 상태에서 /home → /login 리다이렉트", async ({ page }) => {
+    await page.goto("/home");
+    await page.waitForURL("**/login", { timeout: 5000 });
+    await expect(page).toHaveURL(/\/login/);
+  });
+
   test("비인증 상태에서 /survey/mrs → /login 리다이렉트", async ({ page }) => {
     await page.goto("/survey/mrs");
     await page.waitForURL("**/login", { timeout: 5000 });

@@ -11,7 +11,7 @@ export default function SplashPage() {
     const timer = setTimeout(async () => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
-      router.replace(session ? "/survey/mrs" : "/login");
+      router.replace(session ? "/home" : "/login");
     }, 1500);
     return () => clearTimeout(timer);
   }, [router]);
