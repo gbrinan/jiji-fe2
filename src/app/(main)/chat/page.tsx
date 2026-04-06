@@ -42,8 +42,8 @@ export default function ChatListPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-blue-50 to-white">
-      <Header title="채팅" />
+    <div className="min-h-dvh bg-figma-gradient">
+      <Header showBackButton showHomeButton showProfileIcons transparent />
 
       <div className="px-5 py-6 flex flex-col gap-3">
         <Button variant="primary" fullWidth onClick={handleNewSession} leftIcon={<Plus className="w-5 h-5" />}>

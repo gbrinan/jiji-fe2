@@ -14,9 +14,9 @@ export default function Card({
   onClick,
 }: CardProps) {
   const variants = {
-    default: "bg-white rounded-2xl",
-    elevated: "bg-white rounded-2xl shadow-lg",
-    outlined: "bg-white rounded-2xl border border-gray-200",
+    default: "bg-white rounded-3xl border border-[#fafafa]",
+    elevated: "bg-white rounded-3xl border border-[#fafafa] shadow-md",
+    outlined: "bg-white rounded-3xl border border-gray-200",
   };
 
   const paddings = {

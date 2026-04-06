@@ -27,19 +27,19 @@ export default function Button({
   type = "button",
   className = "",
 }: ButtonProps) {
-  const baseStyles = "inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-150 min-h-[44px] min-w-[44px]";
+  const baseStyles = "inline-flex items-center justify-center font-semibold rounded-2xl transition-all duration-150 min-w-[44px]";
 
   const variants = {
-    primary: "bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:from-primary-600 hover:to-blue-600",
-    secondary: "bg-white border border-primary-500 text-primary-500 hover:bg-primary-50",
+    primary: "bg-primary-500 text-white hover:bg-primary-600",
+    secondary: "bg-white border border-primary-300 text-primary-500 hover:bg-primary-50",
     danger: "bg-red-500 text-white hover:bg-red-600",
     ghost: "bg-transparent text-primary-500 hover:bg-primary-50",
   };
 
   const sizes = {
-    sm: "px-4 py-2 text-sm",
-    md: "px-6 py-3 text-base",
-    lg: "px-8 py-4 text-base",
+    sm: "px-4 py-2 text-sm min-h-[36px]",
+    md: "px-6 py-3 text-base min-h-[48px]",
+    lg: "px-8 py-4 text-lg min-h-[56px]",
   };
 
   return (

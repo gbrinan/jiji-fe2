@@ -6,13 +6,13 @@
   --color-primary-200: #BFDBFE;
   --color-primary-300: #93C5FD;
   --color-primary-400: #60A5FA;
-  --color-primary-500: #4A90D9;
-  --color-primary-600: #357ABD;
+  --color-primary-500: #0486FF;
+  --color-primary-600: #2F75F7;
   --color-primary-700: #1D4ED8;
   --color-primary-800: #1E3A5F;
   --color-primary-900: #1E3A8A;
 
-  --color-domain-physical: #4A90D9;
+  --color-domain-physical: #0486FF;
   --color-domain-psychological: #8B5CF6;
   --color-domain-urogenital: #EC4899;
 
@@ -23,7 +23,12 @@
 
 body {
   background: #F9FAFB;
-  color: #111827;
+  color: #1e1e1e;
+}
+
+/* Figma background gradient - pink/peach to blue */
+.bg-figma-gradient {
+  background: linear-gradient(180deg, #F5E6D8 0%, #E8D5C4 15%, #D4C4D8 30%, #B8C4E8 50%, #A0B8E8 70%, #8BAEE8 85%, #7BA4E8 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {

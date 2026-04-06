@@ -81,8 +81,8 @@ export default function MrsSurveyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh bg-gradient-to-b from-blue-50 to-white">
-        <Header title="갱년기 증상 평가" showBackButton />
+      <div className="min-h-dvh bg-figma-gradient">
+        <Header showBackButton showHomeButton showProfileIcons transparent />
         <div className="px-5 py-6 flex flex-col gap-4">
           <Skeleton variant="bar" />
           <Skeleton variant="card" height="300px" />
@@ -93,8 +93,8 @@ export default function MrsSurveyPage() {
 
   if (error && questions.length === 0) {
     return (
-      <div className="min-h-dvh bg-gradient-to-b from-blue-50 to-white">
-        <Header title="갱년기 증상 평가" showBackButton />
+      <div className="min-h-dvh bg-figma-gradient">
+        <Header showBackButton showHomeButton showProfileIcons transparent />
         <div className="px-5 py-12 text-center">
           <p className="text-red-500 mb-4">{error}</p>
           <Button variant="secondary" onClick={() => window.location.reload()}>
@@ -106,8 +106,8 @@ export default function MrsSurveyPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-blue-50 to-white">
-      <Header title="갱년기 증상 평가" showBackButton />
+    <div className="min-h-dvh bg-figma-gradient">
+      <Header showBackButton showHomeButton showProfileIcons transparent />
 
       <div className="px-5 py-6 flex flex-col gap-6">
         <ProgressBar current={currentIndex + 1} total={totalQuestions} />

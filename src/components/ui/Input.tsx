@@ -49,12 +49,13 @@ export default function Input({
         aria-invalid={!!error}
         aria-describedby={error ? errorId : helperText ? helperId : undefined}
         className={`
-          h-12 px-4 rounded-xl border text-base outline-none transition-all duration-150
+          h-14 px-4 rounded-2xl border text-base outline-none transition-all duration-150
+          shadow-[inset_0px_1px_2px_0px_rgba(0,0,0,0.05)]
           ${error
             ? "border-red-500 focus:ring-2 focus:ring-red-500"
-            : "border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            : "border-[#fafafa] focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           }
-          ${disabled ? "bg-gray-100 text-gray-400" : "bg-white"}
+          ${disabled ? "bg-gray-100 text-gray-400" : "bg-[#f5f5f5]"}
         `}
       />
       {error && <p id={errorId} className="text-sm text-red-500 mt-1">{error}</p>}

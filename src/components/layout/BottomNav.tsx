@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, MessageCircle, HelpCircle, User } from "lucide-react";
+import { Home, ClipboardList, MessageCircle, HelpCircle, User } from "lucide-react";
 
 const tabs = [
+  { href: "/home", label: "홈", icon: Home, match: "/home" },
   { href: "/survey/mrs", label: "진단", icon: ClipboardList, match: "/survey" },
   { href: "/chat", label: "채팅", icon: MessageCircle, match: "/chat" },
   { href: "/faq", label: "FAQ", icon: HelpCircle, match: "/faq" },
@@ -16,7 +17,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-50"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/90 backdrop-blur-sm border-t border-gray-100 z-50"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       role="navigation"
       aria-label="Main navigation"
@@ -29,11 +30,13 @@ export default function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center gap-1 py-2 min-w-[64px] ${active ? "text-primary-500" : "text-gray-400"}`}
+              className={`flex flex-col items-center gap-1 py-2.5 min-w-[64px] transition-colors ${
+                active ? "text-primary-500" : "text-gray-400"
+              }`}
               aria-current={active ? "page" : undefined}
             >
-              <Icon className="w-6 h-6" />
-              <span className="text-xs">{tab.label}</span>
+              <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 1.5} />
+              <span className="text-[11px] font-medium">{tab.label}</span>
             </Link>
           );
         })}
