@@ -17,6 +17,8 @@
   --color-domain-urogenital: #EC4899;
 
   --font-sans: var(--font-noto-sans-kr), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --spacing-13: 3.25rem;
 }
 
 body {
