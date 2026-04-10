@@ -9,19 +9,21 @@ import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
 import { Send } from "lucide-react";
 
+function getStoredResult(): MrsResult | null {
+  if (typeof window === "undefined") return null;
+  const stored = sessionStorage.getItem("mrsResult");
+  if (!stored) return null;
+  try { return JSON.parse(stored); } catch { return null; }
+}
+
 export default function ResultPage() {
   const router = useRouter();
-  const [result, setResult] = useState<MrsResult | null>(null);
+  const [result] = useState<MrsResult | null>(getStoredResult);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("mrsResult");
-    if (stored) {
-      try { setResult(JSON.parse(stored)); } catch { router.replace("/survey/mrs"); }
-    } else {
-      router.replace("/survey/mrs");
-    }
-  }, [router]);
+    if (!result) router.replace("/survey/mrs");
+  }, [result, router]);
 
   const handleAction = async () => {
     if (!result) return;
@@ -34,7 +36,10 @@ export default function ResultPage() {
     try {
       const session = await chatApi.createSession({ context: "result", surveyResultId: String(result.id) });
       router.push(`/chat/${session.id}`);
-    } catch { router.push("/chat"); }
+    } catch (err) {
+      console.error("Failed to create chat session:", err);
+      router.push("/chat");
+    }
   };
 
   if (!result) {

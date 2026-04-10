@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { chatApi } from "@/lib/api";
 import type { MessageResponse } from "@/lib/types";
@@ -14,17 +14,35 @@ export default function ChatConversationPage() {
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMessages = useCallback(async () => {
     try {
       const msgs = await chatApi.getMessages(sessionId);
       setMessages(msgs);
-    } catch {}
+      return msgs;
+    } catch (err) {
+      console.error("Failed to fetch messages:", err);
+      return null;
+    }
   }, [sessionId]);
 
   useEffect(() => {
-    fetchMessages().finally(() => setLoading(false));
+    let cancelled = false;
+    async function load() {
+      await fetchMessages();
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
   }, [fetchMessages]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearTimeout(pollingRef.current);
+    };
+  }, []);
 
   const handleSend = async () => {
     if (!inputValue.trim() || sending) return;
@@ -33,20 +51,30 @@ export default function ChatConversationPage() {
     setSending(true);
 
     try {
-      // Send user message
       const userMsg = await chatApi.sendMessage(sessionId, {
         senderType: "user",
         content,
       });
       setMessages((prev) => [...prev, userMsg]);
 
-      // In a real app, the assistant response would come from a different mechanism
-      // For now, we just refetch messages after a short delay
-      setTimeout(async () => {
-        await fetchMessages();
-        setSending(false);
-      }, 1000);
-    } catch {
+      // Poll for assistant response with cleanup
+      const pollForReply = async (attempts = 0) => {
+        if (attempts >= 10) {
+          setSending(false);
+          return;
+        }
+        pollingRef.current = setTimeout(async () => {
+          const msgs = await fetchMessages();
+          if (msgs && msgs.length > messages.length + 1) {
+            setSending(false);
+          } else {
+            pollForReply(attempts + 1);
+          }
+        }, 1500);
+      };
+      pollForReply();
+    } catch (err) {
+      console.error("Failed to send message:", err);
       setSending(false);
     }
   };
