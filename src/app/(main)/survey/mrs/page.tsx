@@ -5,24 +5,23 @@ import { useRouter } from "next/navigation";
 import { mrsApi } from "@/lib/api";
 import type { MrsQuestion, MrsAnswerItem, MrsResult } from "@/lib/types";
 import Header from "@/components/layout/Header";
-import ProgressBar from "@/components/ui/ProgressBar";
 import Button from "@/components/ui/Button";
-import SurveyQuestionCard from "@/components/features/SurveyQuestionCard";
-import { LikertRadioGroup } from "@/components/ui/RadioGroup";
 import Skeleton from "@/components/ui/Skeleton";
 
 const LIKERT_OPTIONS = [
-  { value: 0, label: "없음" },
-  { value: 1, label: "경미" },
-  { value: 2, label: "중등" },
-  { value: 3, label: "심함" },
-  { value: 4, label: "매우 심함" },
+  { value: 0, label: "없음", emoji: "😄" },
+  { value: 1, label: "약간", emoji: "😊" },
+  { value: 2, label: "보통", emoji: "😐" },
+  { value: 3, label: "심함", emoji: "😣" },
+  { value: 4, label: "매우 심함", emoji: "😖" },
 ];
+
+const QUESTIONS_PER_PAGE = 5;
 
 export default function MrsSurveyPage() {
   const router = useRouter();
   const [questions, setQuestions] = useState<MrsQuestion[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [page, setPage] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -40,25 +39,30 @@ export default function MrsSurveyPage() {
       });
   }, []);
 
-  const currentQuestion = questions[currentIndex];
-  const totalQuestions = questions.length;
-  const isLastQuestion = currentIndex === totalQuestions - 1;
-  const hasAnswer = currentQuestion ? answers[currentQuestion.id] !== undefined : false;
+  const totalPages = Math.ceil(questions.length / QUESTIONS_PER_PAGE);
+  const isLastPage = page === totalPages - 1;
+  const pageQuestions = questions.slice(
+    page * QUESTIONS_PER_PAGE,
+    (page + 1) * QUESTIONS_PER_PAGE
+  );
 
-  const handleAnswer = (value: number) => {
-    if (!currentQuestion) return;
-    setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }));
+  const allPageAnswered = pageQuestions.every((q) => answers[q.id] !== undefined);
+
+  const handleAnswer = (questionId: number, value: number) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
   const handleNext = () => {
-    if (!isLastQuestion) {
-      setCurrentIndex((prev) => prev + 1);
+    if (!isLastPage) {
+      setPage((prev) => prev + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
+    if (page > 0) {
+      setPage((prev) => prev - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -84,8 +88,9 @@ export default function MrsSurveyPage() {
       <div className="min-h-dvh bg-figma-gradient">
         <Header showBackButton showHomeButton showProfileIcons transparent />
         <div className="px-5 py-6 flex flex-col gap-4">
-          <Skeleton variant="bar" />
-          <Skeleton variant="card" height="300px" />
+          <Skeleton variant="card" height="120px" />
+          <Skeleton variant="card" height="200px" />
+          <Skeleton variant="card" height="200px" />
         </div>
       </div>
     );
@@ -106,53 +111,98 @@ export default function MrsSurveyPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-figma-gradient">
+    <div className="min-h-dvh bg-figma-gradient flex flex-col">
       <Header showBackButton showHomeButton showProfileIcons transparent />
 
-      <div className="px-5 py-6 flex flex-col gap-6">
-        <ProgressBar current={currentIndex + 1} total={totalQuestions} />
-
-        {currentQuestion && (
-          <SurveyQuestionCard
-            questionNumber={currentIndex + 1}
-            totalQuestions={totalQuestions}
-            domain={currentQuestion.domain}
-            prompt={currentQuestion.prompt}
-          >
-            <LikertRadioGroup
-              questionId={currentQuestion.id}
-              options={LIKERT_OPTIONS}
-              selectedValue={answers[currentQuestion.id] ?? null}
-              onChange={handleAnswer}
-              disabled={submitting}
-            />
-          </SurveyQuestionCard>
+      <div className="flex-1 px-4 pb-4 flex flex-col">
+        {/* Intro message (page 1 only) */}
+        {page === 0 && (
+          <div className="bg-white rounded-3xl border border-[#fafafa] shadow-sm p-5 mb-6">
+            <p className="text-base font-medium text-[#1e1e1e] leading-[25px]">
+              지금부터 몇 가지 간단한 질문을 드릴게요.{"\n"}
+              모든 답변은 안전하게 보호되며, 의료 상담 이외의 목적으로는 활용되지 않습니다.
+            </p>
+          </div>
         )}
 
-        {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+        {/* Questions */}
+        <div className="flex flex-col gap-6">
+          {pageQuestions.map((question, idx) => {
+            const globalIndex = page * QUESTIONS_PER_PAGE + idx;
+            const questionNum = String(globalIndex + 1).padStart(2, "0");
+            const selected = answers[question.id];
 
-        <div className="flex gap-3">
-          {currentIndex > 0 && (
+            return (
+              <div key={question.id} className="flex flex-col gap-3">
+                {/* Question number */}
+                <span className="text-sm font-semibold text-primary-600">{questionNum}</span>
+
+                {/* Question text */}
+                <h3 className="text-lg font-bold text-[#1e1e1e] leading-7">
+                  {question.prompt}
+                </h3>
+
+                {/* Emoji Likert scale */}
+                <div className="flex justify-between items-start pt-1">
+                  {LIKERT_OPTIONS.map((option) => {
+                    const isSelected = selected === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => handleAnswer(question.id, option.value)}
+                        disabled={submitting}
+                        className="flex flex-col items-center gap-1.5 min-w-[52px]"
+                      >
+                        <span className={`text-2xl transition-transform ${isSelected ? "scale-125" : ""}`}>
+                          {option.emoji}
+                        </span>
+                        <span className={`text-xs tracking-[0.18px] ${
+                          isSelected ? "font-semibold text-primary-600" : "font-medium text-[#94a3b8]"
+                        }`}>
+                          {option.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Divider between questions */}
+                {idx < pageQuestions.length - 1 && (
+                  <div className="h-px bg-gray-100 mt-2" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {error && <p className="text-sm text-red-500 text-center mt-4">{error}</p>}
+
+        {/* Navigation buttons */}
+        <div className="flex gap-3 mt-8 pb-4">
+          {page > 0 && (
             <Button variant="secondary" onClick={handlePrev} disabled={submitting} className="flex-1">
               이전
             </Button>
           )}
-          {isLastQuestion ? (
+          {isLastPage ? (
             <Button
               variant="primary"
               onClick={handleSubmit}
               loading={submitting}
-              disabled={!hasAnswer}
+              disabled={!allPageAnswered}
               className="flex-1"
             >
-              제출
+              완료
             </Button>
           ) : (
             <Button
               variant="primary"
               onClick={handleNext}
-              disabled={!hasAnswer}
-              fullWidth={currentIndex === 0}
+              disabled={!allPageAnswered}
+              fullWidth={page === 0}
             >
               다음
             </Button>

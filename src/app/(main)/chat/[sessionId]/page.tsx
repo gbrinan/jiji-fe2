@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { chatApi } from "@/lib/api";
 import type { MessageResponse } from "@/lib/types";
 import ChatLayout from "@/components/layout/ChatLayout";
@@ -9,6 +9,7 @@ import Skeleton from "@/components/ui/Skeleton";
 
 export default function ChatConversationPage() {
   const params = useParams();
+  const router = useRouter();
   const sessionId = params.sessionId as string;
   const [messages, setMessages] = useState<MessageResponse[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -94,6 +95,15 @@ export default function ChatConversationPage() {
     );
   }
 
+  const handleEndSession = async () => {
+    try {
+      await chatApi.endSession(sessionId);
+    } catch {
+      // Session may already be ended
+    }
+    router.push("/closing");
+  };
+
   return (
     <ChatLayout
       title="상담"
@@ -108,6 +118,7 @@ export default function ChatConversationPage() {
       onSend={handleSend}
       inputDisabled={sending}
       showBackButton
+      onEndSession={handleEndSession}
     />
   );
 }

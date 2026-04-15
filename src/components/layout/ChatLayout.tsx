@@ -18,6 +18,7 @@ interface ChatLayoutProps {
   inputDisabled?: boolean;
   showBackButton?: boolean;
   onBack?: () => void;
+  onEndSession?: () => void;
 }
 
 export default function ChatLayout({
@@ -29,6 +30,7 @@ export default function ChatLayout({
   inputDisabled = false,
   showBackButton = true,
   onBack,
+  onEndSession,
 }: ChatLayoutProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -50,7 +52,21 @@ export default function ChatLayout({
 
   return (
     <div className="flex flex-col min-h-dvh">
-      <Header title={title} showBackButton={showBackButton} onBack={onBack} />
+      <Header
+        title={title}
+        showBackButton={showBackButton}
+        onBack={onBack}
+        rightAction={
+          onEndSession ? (
+            <button
+              onClick={onEndSession}
+              className="text-sm font-medium text-primary-500"
+            >
+              상담 종료
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* Message list */}
       <div className="flex-1 overflow-y-auto px-5 py-4" role="log">

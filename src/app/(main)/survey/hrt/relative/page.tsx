@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { hrtApi, chatApi } from "@/lib/api";
+import { hrtApi } from "@/lib/api";
 import type { HrtRelativeQuestion, HrtAnswerItem } from "@/lib/types";
 import Header from "@/components/layout/Header";
 import ProgressBar from "@/components/ui/ProgressBar";
@@ -73,13 +73,8 @@ export default function HrtRelativePage() {
 
       // Route based on nextAction
       if (result.diagnosis.nextAction === "HORMONAL_THERAPY") {
-        // Safe for HRT - create chat session
-        try {
-          const session = await chatApi.createSession({ context: "result" });
-          router.push(`/chat/${session.id}`);
-        } catch {
-          router.push("/chat");
-        }
+        // Safe for HRT - show treatment recommendations
+        router.push("/survey/hrt/treatment");
       } else {
         // RELATIVE_CONTRAINDICATION or RELATIVE_CONTRAINDICATION_SUSPECTED
         router.push("/chat");

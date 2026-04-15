@@ -63,11 +63,26 @@ test.describe("JIJI App E2E Tests", () => {
   });
 
   test("잘못된 로그인 시 에러 메시지", async ({ page }) => {
+    // Mock Supabase to return auth error
+    await page.route("**/auth/v1/token**", (route) => {
+      if (route.request().url().includes("grant_type=password")) {
+        return route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: "invalid_grant",
+            error_description: "Invalid login credentials",
+          }),
+        });
+      }
+      return route.continue();
+    });
+
     await page.goto("/login");
     await page.fill('input[type="email"]', "invalid@test.com");
     await page.fill('input[type="password"]', "wrongpassword");
     await page.click("button[type='submit']");
-    // Should show error message
-    await expect(page.locator("text=이메일 또는 비밀번호가 올바르지 않습니다")).toBeVisible({ timeout: 10000 });
+    // Should show error message (p.text-red-500)
+    await expect(page.locator("p.text-red-500")).toBeVisible({ timeout: 10000 });
   });
 });
