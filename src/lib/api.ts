@@ -131,6 +131,17 @@ export const agentApi = {
       body: JSON.stringify({ message, sessionId }),
     });
 
+    // Agent returns 401 with needReauth in JSON body — parse it instead of throwing
+    if (res.status === 401) {
+      try {
+        const data = await res.json();
+        if (data.needReauth) return data as AgentChatResponse;
+      } catch {
+        // Not JSON — fall through to error
+      }
+      throw new ApiError(401, "Unauthorized");
+    }
+
     if (!res.ok) {
       const body = await res.text();
       throw new ApiError(res.status, body);
