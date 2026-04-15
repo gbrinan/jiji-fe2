@@ -3,10 +3,22 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { mrsApi } from "@/lib/api";
-import type { MrsQuestion, MrsAnswerItem, MrsResult } from "@/lib/types";
+import type { MrsQuestion, MrsAnswerItem, MrsResult, MrsDomain } from "@/lib/types";
 import Header from "@/components/layout/Header";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
+
+const DOMAIN_LABELS: Record<MrsDomain, string> = {
+  SOMATIC: "신체 증상",
+  PSYCHOLOGICAL: "심리 증상",
+  UROGENITAL: "비뇨생식기",
+};
+
+const DOMAIN_COLORS: Record<MrsDomain, string> = {
+  SOMATIC: "#0486FF",
+  PSYCHOLOGICAL: "#8B5CF6",
+  UROGENITAL: "#EC4899",
+};
 
 const LIKERT_OPTIONS = [
   { value: 0, label: "없음", emoji: "😄" },
@@ -16,7 +28,7 @@ const LIKERT_OPTIONS = [
   { value: 4, label: "매우 심함", emoji: "😖" },
 ];
 
-const QUESTIONS_PER_PAGE = 5;
+const QUESTIONS_PER_PAGE = 1;
 
 export default function MrsSurveyPage() {
   const router = useRouter();
@@ -134,6 +146,14 @@ export default function MrsSurveyPage() {
 
             return (
               <div key={question.id} className="flex flex-col gap-3">
+                {/* Domain badge */}
+                <span
+                  className="rounded-full px-3 py-1 text-xs font-medium text-white self-start"
+                  style={{ backgroundColor: DOMAIN_COLORS[question.domain] }}
+                >
+                  {DOMAIN_LABELS[question.domain]}
+                </span>
+
                 {/* Question number */}
                 <span className="text-sm font-semibold text-primary-600">{questionNum}</span>
 

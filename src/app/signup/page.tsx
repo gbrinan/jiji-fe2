@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Mail, Eye, EyeOff } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -14,6 +13,8 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -73,9 +74,77 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             {/* Form fields */}
             <div className="flex flex-col gap-3">
-              <Input type="email" label="이메일" placeholder="이메일을 입력해주세요" value={email} onChange={setEmail} autoComplete="email" required />
-              <Input type="password" label="비밀번호" placeholder="8자 이상 입력해주세요" helperText="8자 이상" value={password} onChange={setPassword} autoComplete="new-password" required />
-              <Input type="password" label="비밀번호 확인" placeholder="비밀번호를 다시 입력해주세요" value={passwordConfirm} onChange={setPasswordConfirm} autoComplete="new-password" required />
+              {/* Email field with mail icon */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  이메일<span className="text-red-500 ml-0.5">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="이메일을 입력해주세요"
+                    autoComplete="email"
+                    required
+                    className="w-full h-14 px-4 pr-12 rounded-2xl border border-[#fafafa] bg-[#f5f5f5] text-base outline-none transition-all duration-150 shadow-[inset_0px_1px_2px_0px_rgba(0,0,0,0.05)] focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                  <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Password field with eye toggle */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  비밀번호<span className="text-red-500 ml-0.5">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="8자 이상 입력해주세요"
+                    autoComplete="new-password"
+                    required
+                    className="w-full h-14 px-4 pr-12 rounded-2xl border border-[#fafafa] bg-[#f5f5f5] text-base outline-none transition-all duration-150 shadow-[inset_0px_1px_2px_0px_rgba(0,0,0,0.05)] focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">8자 이상</p>
+              </div>
+
+              {/* Password confirm field with eye toggle */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  비밀번호 확인<span className="text-red-500 ml-0.5">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswordConfirm ? "text" : "password"}
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    placeholder="비밀번호를 다시 입력해주세요"
+                    autoComplete="new-password"
+                    required
+                    className="w-full h-14 px-4 pr-12 rounded-2xl border border-[#fafafa] bg-[#f5f5f5] text-base outline-none transition-all duration-150 shadow-[inset_0px_1px_2px_0px_rgba(0,0,0,0.05)] focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordConfirm((prev) => !prev)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+                    tabIndex={-1}
+                  >
+                    {showPasswordConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Terms checkbox */}
