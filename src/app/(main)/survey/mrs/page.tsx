@@ -223,6 +223,7 @@ export default function MrsSurveyPage() {
               onClick={handleNext}
               disabled={!allPageAnswered}
               fullWidth={page === 0}
+              className={page > 0 ? "flex-1" : ""}
             >
               다음
             </Button>
