@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { chatApi } from "@/lib/api";
+import { chatApi, agentApi } from "@/lib/api";
 import type { MessageResponse } from "@/lib/types";
 import ChatLayout from "@/components/layout/ChatLayout";
 import Skeleton from "@/components/ui/Skeleton";
@@ -15,7 +15,6 @@ export default function ChatConversationPage() {
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -38,13 +37,6 @@ export default function ChatConversationPage() {
     return () => { cancelled = true; };
   }, [fetchMessages]);
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearTimeout(pollingRef.current);
-    };
-  }, []);
-
   const handleSend = async () => {
     if (!inputValue.trim() || sending) return;
     const content = inputValue.trim();
@@ -52,30 +44,47 @@ export default function ChatConversationPage() {
     setSending(true);
 
     try {
+      // 1. Save user message to BE
       const userMsg = await chatApi.sendMessage(sessionId, {
         senderType: "user",
         content,
       });
       setMessages((prev) => [...prev, userMsg]);
 
-      // Poll for assistant response with cleanup
-      const pollForReply = async (attempts = 0) => {
-        if (attempts >= 10) {
-          setSending(false);
-          return;
-        }
-        pollingRef.current = setTimeout(async () => {
-          const msgs = await fetchMessages();
-          if (msgs && msgs.length > messages.length + 1) {
-            setSending(false);
-          } else {
-            pollForReply(attempts + 1);
-          }
-        }, 1500);
-      };
-      pollForReply();
+      // 2. Call agent for AI response
+      const agentResponse = await agentApi.chat(content, sessionId);
+
+      if (agentResponse.needReauth) {
+        router.push("/login");
+        return;
+      }
+
+      // 3. Save assistant response to BE
+      const assistantMsg = await chatApi.sendMessage(sessionId, {
+        senderType: "assistant",
+        content: agentResponse.reply,
+        metadata: {
+          module: agentResponse.module,
+          contraindicationLevel: agentResponse.contraindicationLevel,
+          emergencyTriggered: agentResponse.emergencyTriggered,
+        },
+      });
+      setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
       console.error("Failed to send message:", err);
+      // Show error as a temporary assistant message
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `error-${Date.now()}`,
+          sessionId,
+          senderType: "assistant",
+          content: "죄송합니다. 일시적인 오류가 발생했어요. 다시 시도해 주세요.",
+          metadata: null,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    } finally {
       setSending(false);
     }
   };

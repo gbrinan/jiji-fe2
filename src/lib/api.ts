@@ -102,5 +102,43 @@ export const faqApi = {
   getById: (id: string) => get<FaqResponse>(`/api/v1/chats/faq/${id}`),
 };
 
+// Agent API (moai-jiji-chatbot)
+const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "https://moai-jiji-chatbot.vercel.app";
+
+export interface AgentChatResponse {
+  sessionId: string;
+  reply: string;
+  module: string;
+  contraindicationLevel: string;
+  shouldLogMood: boolean;
+  emergencyTriggered: boolean;
+  needReauth: boolean;
+}
+
+export const agentApi = {
+  chat: async (message: string, sessionId?: string): Promise<AgentChatResponse> => {
+    const token = await getToken();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${AGENT_URL}/agent/v1/chat`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ message, sessionId }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new ApiError(res.status, body);
+    }
+
+    return res.json();
+  },
+};
+
 // Keep backward-compatible generic api object
 export const api = { get, post, patch };
