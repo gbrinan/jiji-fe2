@@ -3,6 +3,9 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import type { User, Session } from "@supabase/supabase-js";
+import { Capacitor } from "@capacitor/core";
+import { App } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase";
 
 interface AuthContextType {
@@ -39,7 +42,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    if (!Capacitor.isNativePlatform()) {
+      return () => subscription.unsubscribe();
+    }
+
+    // Deep link (app.jiji.mobile://callback?accessToken=...&refreshToken=...)
+    // fires here after the Chrome Custom Tab finishes OAuth.
+    const listenerHandle = App.addListener("appUrlOpen", async ({ url }) => {
+      try {
+        const parsed = new URL(url);
+        const accessToken = parsed.searchParams.get("accessToken");
+        const refreshToken = parsed.searchParams.get("refreshToken");
+        if (!accessToken || !refreshToken) return;
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (error) {
+          console.error("[auth] setSession failed", error);
+          return;
+        }
+        window.location.href = "/home/";
+      } finally {
+        void Browser.close().catch(() => {});
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      void listenerHandle.then((h) => h.remove());
+    };
   }, [supabase.auth]);
 
   const logout = useCallback(async () => {

@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Link from "next/link";
+
+const NATIVE_OAUTH_REDIRECT = "app.jiji.mobile://callback";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,8 +37,15 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = (provider: "kakao" | "naver" | "apple") => {
-    const redirectUrl = `${window.location.origin}/callback`;
-    window.location.href = `${API_URL}/api/v1/auth/oauth/${provider}?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+    const redirectUrl = Capacitor.isNativePlatform()
+      ? NATIVE_OAUTH_REDIRECT
+      : `${window.location.origin}/callback`;
+    const url = `${API_URL}/api/v1/auth/oauth/${provider}?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+    if (Capacitor.isNativePlatform()) {
+      void Browser.open({ url });
+    } else {
+      window.location.href = url;
+    }
   };
 
   return (
