@@ -69,8 +69,8 @@ export default function HrtAbsolutePage() {
       if (result.diagnosis.nextAction === "START_HRT_RELATIVE") {
         router.push("/survey/hrt/relative");
       } else {
-        // EXPERT_CONSULTATION - redirect to chat or info page
-        router.push("/chat");
+        // EXPERT_CONSULTATION = absolute contraindication → non-hormonal FAQ
+        router.push("/faq?category=non-hormonal");
       }
     } catch {
       setError("제출에 실패했습니다. 다시 시도해 주세요.");

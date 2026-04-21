@@ -51,6 +51,13 @@ export default function ResultPage() {
       router.push("/survey/hrt/absolute");
       return;
     }
+    // NON_HORMONAL_QA / LIFESTYLE_GUIDANCE / CBT_GUIDANCE / EXPERT_CONSULTATION
+    // → show the corresponding FAQ page instead of a bare chat session
+    if (action === "NON_HORMONAL_QA" || action === "LIFESTYLE_GUIDANCE" || action === "CBT_GUIDANCE") {
+      router.push("/faq?category=non-hormonal");
+      return;
+    }
+    // EXPERT_CONSULTATION fallback → still open a contextual chat session
     setActionLoading(true);
     try {
       const session = await chatApi.createSession({ context: "result", surveyResultId: String(result.id) });

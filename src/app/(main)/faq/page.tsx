@@ -1,23 +1,36 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { faqApi } from "@/lib/api";
 import type { FaqResponse } from "@/lib/types";
 import Header from "@/components/layout/Header";
 import Skeleton from "@/components/ui/Skeleton";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
-export default function FaqPage() {
+const CATEGORY_LABELS: Record<string, string> = {
+  hormonal: "호르몬 치료 FAQ",
+  "non-hormonal": "비호르몬 치료 FAQ",
+  lifestyle: "생활 습관 FAQ",
+};
+
+function FaqContent() {
+  const searchParams = useSearchParams();
+  const category = searchParams.get("category") || undefined;
+  const headingLabel = (category && CATEGORY_LABELS[category]) || "FAQ";
+
   const [faqs, setFaqs] = useState<FaqResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    faqApi.getAll()
+    setLoading(true);
+    faqApi
+      .getAll(category)
       .then(setFaqs)
-      .catch(() => {})
+      .catch(() => setFaqs([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [category]);
 
   const toggleId = (id: string) => {
     setOpenIds((prev) => {
@@ -32,10 +45,10 @@ export default function FaqPage() {
     <div className="min-h-dvh bg-figma-gradient flex flex-col">
       <Header showBackButton showHomeButton showProfileIcons transparent />
 
-      {/* FAQ pill label */}
+      {/* FAQ pill label — changes with selected category */}
       <div className="flex justify-center mb-4">
         <span className="bg-black/5 rounded-full px-3 py-1 shadow-sm text-sm font-medium text-slate-700 tracking-[0.21px]">
-          FAQ
+          {headingLabel}
         </span>
       </div>
 
@@ -95,5 +108,13 @@ export default function FaqPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function FaqPage() {
+  return (
+    <Suspense fallback={<div className="min-h-dvh bg-figma-gradient" />}>
+      <FaqContent />
+    </Suspense>
   );
 }

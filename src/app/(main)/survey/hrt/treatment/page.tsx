@@ -47,13 +47,9 @@ export default function HrtTreatmentPage() {
     setSending(false);
   };
 
-  const handleGuideClick = async () => {
-    try {
-      const session = await chatApi.createSession({ context: "result" });
-      router.push(`/chat/${session.id}`);
-    } catch {
-      router.push("/chat");
-    }
+  const handleGuideClick = () => {
+    // "호르몬 치료 알아보기" → hormonal FAQ (Figma node 3604:19216)
+    router.push("/faq?category=hormonal");
   };
 
   const handleChatInput = () => {

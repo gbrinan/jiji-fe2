@@ -76,8 +76,8 @@ export default function HrtRelativePage() {
         // Safe for HRT - show treatment recommendations
         router.push("/survey/hrt/treatment");
       } else {
-        // RELATIVE_CONTRAINDICATION or RELATIVE_CONTRAINDICATION_SUSPECTED
-        router.push("/chat");
+        // RELATIVE_CONTRAINDICATION(_SUSPECTED) → non-hormonal FAQ
+        router.push("/faq?category=non-hormonal");
       }
     } catch {
       setError("제출에 실패했습니다. 다시 시도해 주세요.");
