@@ -51,9 +51,14 @@ export default function ResultPage() {
       router.push("/survey/hrt/absolute");
       return;
     }
-    // NON_HORMONAL_QA / LIFESTYLE_GUIDANCE / CBT_GUIDANCE / EXPERT_CONSULTATION
-    // → show the corresponding FAQ page instead of a bare chat session
-    if (action === "NON_HORMONAL_QA" || action === "LIFESTYLE_GUIDANCE" || action === "CBT_GUIDANCE") {
+    // LIFESTYLE_GUIDANCE (mild symptoms) → dedicated lifestyle treatment
+    // screen (Figma node 3510:12619 "진단결과2"). NON_HORMONAL_QA /
+    // CBT_GUIDANCE still route to the non-hormone FAQ.
+    if (action === "LIFESTYLE_GUIDANCE") {
+      router.push("/survey/lifestyle/treatment");
+      return;
+    }
+    if (action === "NON_HORMONAL_QA" || action === "CBT_GUIDANCE") {
       router.push("/faq?category=non-hormonal");
       return;
     }
