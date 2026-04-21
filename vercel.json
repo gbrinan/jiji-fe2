@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/chat/:sessionId", "destination": "/chat/_/" },
+    { "source": "/chat/:sessionId/", "destination": "/chat/_/" }
+  ]
+}

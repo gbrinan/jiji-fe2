@@ -1,22 +1,38 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { chatApi, agentApi } from "@/lib/api";
 import type { MessageResponse } from "@/lib/types";
 import ChatLayout from "@/components/layout/ChatLayout";
 import Skeleton from "@/components/ui/Skeleton";
 
+/**
+ * Reads the chat sessionId from the browser URL directly.
+ * With output:"export" + Vercel rewrites, useParams() would return the
+ * pre-rendered placeholder ("_"), so we bypass it and parse location.
+ */
+function getSessionIdFromUrl(): string {
+  if (typeof window === "undefined") return "";
+  const match = window.location.pathname.match(/\/chat\/([^/?#]+)/);
+  const id = match?.[1] ?? "";
+  return id === "_" ? "" : id;
+}
+
 export default function ChatClient() {
-  const params = useParams();
   const router = useRouter();
-  const sessionId = params.sessionId as string;
+  const [sessionId, setSessionId] = useState<string>("");
   const [messages, setMessages] = useState<MessageResponse[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
+  useEffect(() => {
+    setSessionId(getSessionIdFromUrl());
+  }, []);
+
   const fetchMessages = useCallback(async () => {
+    if (!sessionId) return null;
     try {
       const msgs = await chatApi.getMessages(sessionId);
       setMessages(msgs);
@@ -28,6 +44,7 @@ export default function ChatClient() {
   }, [sessionId]);
 
   useEffect(() => {
+    if (!sessionId) return;
     let cancelled = false;
     async function load() {
       await fetchMessages();
@@ -35,7 +52,7 @@ export default function ChatClient() {
     }
     load();
     return () => { cancelled = true; };
-  }, [fetchMessages]);
+  }, [fetchMessages, sessionId]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || sending) return;
