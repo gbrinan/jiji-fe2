@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { chatApi } from "@/lib/api";
+import { chatApi, agentApi } from "@/lib/api";
 import type { MessageResponse } from "@/lib/types";
 import ChatLayout from "@/components/layout/ChatLayout";
 import Skeleton from "@/components/ui/Skeleton";
@@ -15,7 +15,6 @@ export default function ChatClient() {
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -38,42 +37,62 @@ export default function ChatClient() {
     return () => { cancelled = true; };
   }, [fetchMessages]);
 
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearTimeout(pollingRef.current);
-    };
-  }, []);
-
   const handleSend = async () => {
     if (!inputValue.trim() || sending) return;
     const content = inputValue.trim();
     setInputValue("");
     setSending(true);
 
-    try {
-      const userMsg = await chatApi.sendMessage(sessionId, {
-        senderType: "user",
-        content,
-      });
-      setMessages((prev) => [...prev, userMsg]);
+    // Optimistic: render the user message immediately
+    const userMsg: MessageResponse = {
+      id: `local-${Date.now()}`,
+      sessionId,
+      senderType: "user",
+      content,
+      metadata: null,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
 
-      const pollForReply = async (attempts = 0) => {
-        if (attempts >= 10) {
-          setSending(false);
-          return;
-        }
-        pollingRef.current = setTimeout(async () => {
-          const msgs = await fetchMessages();
-          if (msgs && msgs.length > messages.length + 1) {
-            setSending(false);
-          } else {
-            pollForReply(attempts + 1);
-          }
-        }, 1500);
+    try {
+      // Route the message through moai-jiji-chatbot (/agent/v1/chat).
+      const res = await agentApi.chat(content, sessionId);
+
+      if (res.needReauth) {
+        router.replace(`/login?redirect=/chat/${sessionId}`);
+        return;
+      }
+
+      if (res.emergencyTriggered) {
+        router.push("/emergency");
+        return;
+      }
+
+      const agentMsg: MessageResponse = {
+        id: `agent-${Date.now()}`,
+        sessionId,
+        senderType: "assistant",
+        content: res.reply,
+        metadata: {
+          module: res.module,
+          contraindicationLevel: res.contraindicationLevel,
+          shouldLogMood: res.shouldLogMood,
+        },
+        createdAt: new Date().toISOString(),
       };
-      pollForReply();
+      setMessages((prev) => [...prev, agentMsg]);
     } catch (err) {
-      console.error("Failed to send message:", err);
+      console.error("Agent chat failed:", err);
+      const errorMsg: MessageResponse = {
+        id: `error-${Date.now()}`,
+        sessionId,
+        senderType: "assistant",
+        content: "죄송해요, 잠시 후 다시 시도해주세요.",
+        metadata: null,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
       setSending(false);
     }
   };
