@@ -148,7 +148,7 @@ export default function HrtRelativePage() {
           {isLastQuestion ? (
             <Button variant="primary" onClick={handleSubmit} loading={submitting} disabled={!hasAnswer} className="flex-1">제출</Button>
           ) : (
-            <Button variant="primary" onClick={handleNext} disabled={!hasAnswer} fullWidth={currentIndex === 0}>다음</Button>
+            <Button variant="primary" onClick={handleNext} disabled={!hasAnswer} className="flex-1" fullWidth={currentIndex === 0}>다음</Button>
           )}
         </div>
       </div>
